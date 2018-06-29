@@ -27,8 +27,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include <chrono>
-#include <thread>
 
 #include "rplidar.h" //RPLIDAR standard sdk, all-in-one header
 
@@ -209,8 +207,8 @@ int main(int argc, const char * argv[]) {
 	int calibration_counter = 0;
 	const static int CALIBRATION_PNTS = 500;
 	//double calibration_seeds[8192] = {{ 0.0 }}; // seed sum, num samples
-	double calibration_seeds[8192] = {{ 15000.0 }};
-	double calibration_values[8192] = { { 15000.0 } };
+	double calibration_seeds[8192];
+	double calibration_values[8192];
 
 	for (int i = 0; i < 8192; i++)
 	{
@@ -219,11 +217,10 @@ int main(int argc, const char * argv[]) {
 	}
 	int bad_counter = 0;
 
-	for (int i = 10; i > 0; i--)
+	for (int i = 100; i > 0; i--)
 	{
 		std::cout << "Calibrating in " << i << " ...\n";
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
+		//std::this_thread::sleep_for(std::chrono::seconds(1)); This is broken
 	}
 
 	std::cout << "CALIBRATION COMMENCING!\n";
