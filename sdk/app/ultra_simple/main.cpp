@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 #include "rplidar.h" //RPLIDAR standard sdk, all-in-one header
 
@@ -205,9 +207,28 @@ int main(int argc, const char * argv[]) {
 	// start scan...
 	drv->startScan(0, 1);
 	int calibration_counter = 0;
-	const static int CALIBRATION_PNTS = 25;
-	double calibration_seeds[8192][2] = {{ 0 }}; // seed sum, num samples
-	double calibration_values[8192] = { 0 };
+	const static int CALIBRATION_PNTS = 500;
+	//double calibration_seeds[8192] = {{ 0.0 }}; // seed sum, num samples
+	double calibration_seeds[8192] = {{ 15000.0 }};
+	double calibration_values[8192] = { { 15000.0 } };
+
+	for (int i = 0; i < 8192; i++)
+	{
+		calibration_seeds[i] = 15000.0;
+		calibration_values[i] = 15000.0;
+	}
+	int bad_counter = 0;
+
+	for (int i = 10; i > 0; i--)
+	{
+		std::cout << "Calibrating in " << i << " ...\n";
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+	}
+
+	std::cout << "CALIBRATION COMMENCING!\n";
+	std::cout << "Calibration countdown! -- " << CALIBRATION_PNTS << std::endl;
+
 
 
     // fetech result and print it out...
@@ -223,42 +244,51 @@ int main(int argc, const char * argv[]) {
 
 		if (calibration_counter == CALIBRATION_PNTS)
 		{
-			int bad_counter = 0;
+
 			for (int i = 0; i < 8192; i++)
 			{
-				if (calibration_seeds[i][1] > 0)
-				{
-					calibration_values[i] = calibration_seeds[i][0] / (double)calibration_seeds[i][1] - 100.0;
-					//std::cout << "seed sum: " << calibration_seeds[i][0] << "count: " << calibration_seeds[i][1] << "result: " << calibration_values[i] << std::endl;
-
-				}
-				else
-				{
-					calibration_values[i] = 1000000;
-					bad_counter++;
-				}
+					calibration_values[i] = calibration_seeds[i]*0.9;
+					//std::cout << "\nseed sum: " << calibration_seeds[i][0] << "count: " << calibration_seeds[i][1] << "result: " << calibration_values[i] << std::endl;
+					//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 			}
 			std::cout << "CALIBRATION COMPLETE! only " << bad_counter << " bad samples out of 8192\n";
 		}
 
+
+
         if (IS_OK(op_result)) {
             drv->ascendScanData(nodes, count);
+			if (calibration_counter < CALIBRATION_PNTS)
+			{
+				std::cout << CALIBRATION_PNTS - calibration_counter << ", ";
+			}
             for (int pos = 0; pos < (int)count ; ++pos) {
+
+				double dist = nodes[pos].distance_q2 / 4.0f;
 				if (calibration_counter < CALIBRATION_PNTS)
 				{
-					if (nodes[pos].distance_q2 / 4.0f > 0)
+					if (dist > 0)
 					{
-						calibration_seeds[pos][0] += nodes[pos].distance_q2 / 4.0f;
-						calibration_seeds[pos][1] = calibration_seeds[pos][1] + 1;
+						if (dist < calibration_seeds[pos])
+						{
+							calibration_seeds[pos] = dist;
+						}
+					}
+				}
+				else
+				{ 
+					if ((dist > 0) &&
+						(dist < calibration_values[pos]) &&
+						nodes[pos].sync_quality > 40)
+					{
+						shortest_distance = dist;
+						shortest_angle = (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f;
+						shortest_index = pos;
+						//std::cout << "accepting b/c " << dist << " is less than " << calibration_values[pos] << " for " << shortest_angle << std::endl;
 					}
 				}
 
-				if((nodes[pos].distance_q2/4.0f < shortest_distance) && (nodes[pos].distance_q2 / 4.0f > 0))
-				{
-						shortest_distance = nodes[pos].distance_q2 / 4.0f;
-						shortest_angle = (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f;
-						shortest_index = pos;
-				}
+
                 //printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
                 //    (nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
                 //    (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
@@ -266,18 +296,26 @@ int main(int argc, const char * argv[]) {
                 //    nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
             }
 			calibration_counter++;
-			std::cout << "c counter " << calibration_counter << "!\n";
+			//std::cout << "c counter " << calibration_counter << "!\n";
 
 
 			if (shortest_distance < calibration_values[shortest_index])
 			{
-				printf("shortest theta: %03.2f shortest Dist: %08.2f \n",
+				printf("shortest theta: %03.2f shortest Dist: %08.2f calibration Dist: %08.2f\n",
 					shortest_angle,
-					shortest_distance
+					shortest_distance,
+					calibration_values[shortest_index]
 				);
+				
+				//for (auto val : calibration_seeds[shortest_index])
+				//{
+				//	std::cout  << val << ", ";
+				//}
+				//std::cout << "/n";
 			}
 			else
 			{
+				std::cout << std::endl;
 				//printf("INVALID shortest theta: %03.2f shortest Dist: %08.2f , seed value: %03.2f\n", shortest_angle, shortest_distance, calibration_values[shortest_index] );
 			}
         }
