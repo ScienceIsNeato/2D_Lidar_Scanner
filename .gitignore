@@ -51,8 +51,11 @@ sdk/output/
 sdk/obj/win32/
 tools/
 sdk/workspaces/vc10/.vs/
-sdk/workspaces/vc10/.vs/sdk_and_demo/v15/.suo
 sdk/workspaces/vc10/frame_grabber/
 sdk/workspaces/vc10/simple_grabber/
 sdk/workspaces/vc10/.vs/sdk_and_demo/v15/.suo
 sdk/workspaces/vc10/.vs/sdk_and_demo/v15/Browse.VC.db
+*.log
+*.log
+sdk/obj/win32/2D_scanner/Debug/2D_scanner.Build.CppClean.log
+sdk/workspaces/vc10/sdk_and_demo.VC.db
