@@ -19,7 +19,7 @@ struct ScanResult
 	double closest_angle;
 	double closest_distance;
 	int closest_index;
-	bool valid = false;
+	bool valid;
 };
 
 class Scanner

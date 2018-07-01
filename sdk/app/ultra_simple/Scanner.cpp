@@ -95,6 +95,7 @@ ScanResult Scanner::Scan(RPlidarDriver * drv, double(calibration_values)[NUM_SAM
 {
 	u_result     op_result;
 	ScanResult ret_val;
+	ret_val.valid = false;
 
 	// fetech result and print it out...
 	rplidar_response_measurement_node_t nodes[NUM_SAMPLE_POINTS];
