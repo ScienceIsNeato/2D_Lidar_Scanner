@@ -61,10 +61,9 @@ void ctrlc(int)
     ctrl_c_pressed = true;
 }
 
-void on_finished(RPlidarDriver * drv)
+void on_finished(RPlidarDriver * drv, Scanner *scanner)
 {
-	RPlidarDriver::DisposeDriver(drv);
-	drv = NULL;
+	scanner->Close(drv);
 	exit(0);
 }
 
@@ -157,7 +156,7 @@ int main(int argc, const char * argv[]) {
 
 		fprintf(stderr, "Error, cannot bind to the specified serial port %s.\n"
 			, opt_com_path);
-		on_finished(drv);
+		on_finished(drv, scanner);
 	}
 
 	// print out the device serial number, firmware and hardware version number..
@@ -176,8 +175,8 @@ int main(int argc, const char * argv[]) {
 
 
 	// check health...
-	if (!scanner->checkRPLIDARHealth(drv)) {
-		on_finished(drv);
+	if (!scanner->CheckRPLIDARHealth(drv)) {
+		on_finished(drv, scanner);
 	}
 
 	signal(SIGINT, ctrlc);
@@ -187,13 +186,14 @@ int main(int argc, const char * argv[]) {
 	drv->startScan(0, 1);
 	int calibration_counter = 0;
 	const static int CALIBRATION_PNTS = 50;
-	//double calibration_seeds[8192] = {{ 0.0 }}; // seed sum, num samples
-	double calibration_seeds[8192];
-	double calibration_values[8192];
+	double CALIBRATION_SCALE_FACTOR = 0.95;
+	//double calibration_seeds[NUM_SAMPLE_POINTS] = {{ 0.0 }}; // seed sum, num samples
+	//double calibration_seeds[NUM_SAMPLE_POINTS];
+	double calibration_values[NUM_SAMPLE_POINTS];
 
-	for (int i = 0; i < 8192; i++)
+	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
 	{
-		calibration_seeds[i] = 15000.0;
+		//calibration_seeds[i] = 15000.0;
 		calibration_values[i] = 15000.0;
 	}
 	int bad_counter = 0;
@@ -207,11 +207,13 @@ int main(int argc, const char * argv[]) {
 	std::cout << "CALIBRATION COMMENCING!\n";
 	std::cout << "Calibration countdown! -- " << CALIBRATION_PNTS << std::endl;
 
+	scanner->Calibrate(drv, CALIBRATION_PNTS, calibration_values, CALIBRATION_SCALE_FACTOR);
+
 
 
     // fetech result and print it out...
     while (1) {
-        rplidar_response_measurement_node_t nodes[8192];
+        rplidar_response_measurement_node_t nodes[NUM_SAMPLE_POINTS];
 
         size_t   count = _countof(nodes);
 
@@ -220,40 +222,40 @@ int main(int argc, const char * argv[]) {
 		double shortest_angle = 0;
 		int shortest_index = 0;
 
-		if (calibration_counter == CALIBRATION_PNTS)
-		{
+		//if (calibration_counter == CALIBRATION_PNTS)
+		//{
 
-			for (int i = 0; i < 8192; i++)
-			{
-					calibration_values[i] = calibration_seeds[i]*0.9;
-					//std::cout << "\nseed sum: " << calibration_seeds[i][0] << "count: " << calibration_seeds[i][1] << "result: " << calibration_values[i] << std::endl;
-					//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-			}
-			std::cout << "CALIBRATION COMPLETE! only " << bad_counter << " bad samples out of 8192\n";
-		}
+		//	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
+		//	{
+		//			calibration_values[i] = calibration_seeds[i]*0.9;
+		//			//std::cout << "\nseed sum: " << calibration_seeds[i][0] << "count: " << calibration_seeds[i][1] << "result: " << calibration_values[i] << std::endl;
+		//			//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+		//	}
+		//	std::cout << "CALIBRATION COMPLETE!\n";
+		//}
 
 
 
         if (IS_OK(op_result)) {
             drv->ascendScanData(nodes, count);
-			if (calibration_counter < CALIBRATION_PNTS)
-			{
-				std::cout << CALIBRATION_PNTS - calibration_counter << ", ";
-			}
+			//if (calibration_counter < CALIBRATION_PNTS)
+			//{
+			//	std::cout << CALIBRATION_PNTS - calibration_counter << ", ";
+			//}
             for (int pos = 0; pos < (int)count ; ++pos) {
 
 				double dist = nodes[pos].distance_q2 / 4.0f;
-				if (calibration_counter < CALIBRATION_PNTS)
-				{
-					if (dist > 0)
-					{
-						if (dist < calibration_seeds[pos])
-						{
-							calibration_seeds[pos] = dist;
-						}
-					}
-				}
-				else
+				//if (calibration_counter < CALIBRATION_PNTS)
+				//{
+				//	if (dist > 0)
+				//	{
+				//		if (dist < calibration_seeds[pos])
+				//		{
+				//			calibration_seeds[pos] = dist;
+				//		}
+				//	}
+				//}
+				//else
 				{ 
 					if ((dist > 0) &&
 						(dist < calibration_values[pos]) &&
@@ -273,7 +275,7 @@ int main(int argc, const char * argv[]) {
                 //    nodes[pos].distance_q2/4.0f,
                 //    nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
             }
-			calibration_counter++;
+			//calibration_counter++;
 			//std::cout << "c counter " << calibration_counter << "!\n";
 
 
@@ -308,7 +310,7 @@ int main(int argc, const char * argv[]) {
     drv->stop();
     drv->stopMotor();
     // done!
-	on_finished(drv);    
+	on_finished(drv, scanner);    
     return 0;
 }
 
