@@ -6,6 +6,10 @@
 
 #define NUM_SAMPLE_POINTS 8192
 
+#ifndef _countof
+#define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
+#endif
+
 
 using namespace rp::standalone::rplidar;
 

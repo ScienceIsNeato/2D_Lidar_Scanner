@@ -31,10 +31,6 @@
 #include "rplidar.h" //RPLIDAR standard sdk, all-in-one header
 #include "Scanner.h"
 
-#ifndef _countof
-#define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
-#endif
-
 #ifdef _WIN32
 #include <Windows.h>
 #define delay(x)   ::Sleep(x)
