@@ -157,7 +157,8 @@ int main(int argc, const char * argv[]) {
 
 	// print out the device serial number, firmware and hardware version number..
 	printf("RPLIDAR S/N: ");
-	for (int pos = 0; pos < 16; ++pos) {
+	for (int pos = 0; pos < 16; ++pos)
+	{
 		printf("%02X", devinfo.serialnum[pos]);
 	}
 
@@ -180,19 +181,14 @@ int main(int argc, const char * argv[]) {
 	drv->startMotor();
 	// start scan...
 	drv->startScan(0, 1);
-	int calibration_counter = 0;
 	const static int CALIBRATION_PNTS = 50;
 	double CALIBRATION_SCALE_FACTOR = 0.95;
-	//double calibration_seeds[NUM_SAMPLE_POINTS] = {{ 0.0 }}; // seed sum, num samples
-	//double calibration_seeds[NUM_SAMPLE_POINTS];
 	double calibration_values[NUM_SAMPLE_POINTS];
 
 	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
 	{
-		//calibration_seeds[i] = 15000.0;
 		calibration_values[i] = 15000.0;
 	}
-	int bad_counter = 0;
 
 	for (int i = 100; i > 0; i--)
 	{
@@ -205,65 +201,29 @@ int main(int argc, const char * argv[]) {
 
 	scanner->Calibrate(drv, CALIBRATION_PNTS, calibration_values, CALIBRATION_SCALE_FACTOR);
 
-
-
     // fetech result and print it out...
     while (1) {
         rplidar_response_measurement_node_t nodes[NUM_SAMPLE_POINTS];
-
         size_t   count = _countof(nodes);
-
         op_result = drv->grabScanData(nodes, count);
 		double shortest_distance = 1000000;
 		double shortest_angle = 0;
 		int shortest_index = 0;
 
-		//if (calibration_counter == CALIBRATION_PNTS)
-		//{
-
-		//	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
-		//	{
-		//			calibration_values[i] = calibration_seeds[i]*0.9;
-		//			//std::cout << "\nseed sum: " << calibration_seeds[i][0] << "count: " << calibration_seeds[i][1] << "result: " << calibration_values[i] << std::endl;
-		//			//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-		//	}
-		//	std::cout << "CALIBRATION COMPLETE!\n";
-		//}
-
-
-
         if (IS_OK(op_result)) {
             drv->ascendScanData(nodes, count);
-			//if (calibration_counter < CALIBRATION_PNTS)
-			//{
-			//	std::cout << CALIBRATION_PNTS - calibration_counter << ", ";
-			//}
-            for (int pos = 0; pos < (int)count ; ++pos) {
-
+            for (int pos = 0; pos < (int)count ; ++pos)
+			{
 				double dist = nodes[pos].distance_q2 / 4.0f;
-				//if (calibration_counter < CALIBRATION_PNTS)
-				//{
-				//	if (dist > 0)
-				//	{
-				//		if (dist < calibration_seeds[pos])
-				//		{
-				//			calibration_seeds[pos] = dist;
-				//		}
-				//	}
-				//}
-				//else
-				{ 
-					if ((dist > 0) &&
-						(dist < calibration_values[pos]) &&
-						nodes[pos].sync_quality > 40)
-					{
-						shortest_distance = dist;
-						shortest_angle = (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f;
-						shortest_index = pos;
-						//std::cout << "accepting b/c " << dist << " is less than " << calibration_values[pos] << " for " << shortest_angle << std::endl;
-					}
+				if ((dist > 0) &&
+					(dist < calibration_values[pos]) &&
+					nodes[pos].sync_quality > 40)
+				{
+					shortest_distance = dist;
+					shortest_angle = (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f;
+					shortest_index = pos;
+					//std::cout << "accepting b/c " << dist << " is less than " << calibration_values[pos] << " for " << shortest_angle << std::endl;
 				}
-
 
                 //printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
                 //    (nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
@@ -271,9 +231,6 @@ int main(int argc, const char * argv[]) {
                 //    nodes[pos].distance_q2/4.0f,
                 //    nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
             }
-			//calibration_counter++;
-			//std::cout << "c counter " << calibration_counter << "!\n";
-
 
 			if (shortest_distance < calibration_values[shortest_index])
 			{
@@ -283,11 +240,6 @@ int main(int argc, const char * argv[]) {
 					calibration_values[shortest_index]
 				);
 				
-				//for (auto val : calibration_seeds[shortest_index])
-				//{
-				//	std::cout  << val << ", ";
-				//}
-				//std::cout << "/n";
 			}
 			else
 			{

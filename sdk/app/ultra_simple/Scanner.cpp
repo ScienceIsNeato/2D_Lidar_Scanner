@@ -48,20 +48,15 @@ void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibrati
 	for(int calibration_counter = 0; calibration_counter <= num_samples; calibration_counter++) 
 	{
 		rplidar_response_measurement_node_t nodes[NUM_SAMPLE_POINTS];
-
 		size_t   count = _countof(nodes);
-
 		u_result op_result = drv->grabScanData(nodes, count);
-		double shortest_distance = 1000000;
-		double shortest_angle = 0;
-		int shortest_index = 0;
 
 		if (IS_OK(op_result)) 
 		{
 			drv->ascendScanData(nodes, count);
 			std::cout << num_samples - calibration_counter << ", ";
 			
-			for (int pos = 0; pos < (int)count; ++pos) 
+			for (int pos = 0; pos < (int)count; ++pos)
 			{
 				double dist = nodes[pos].distance_q2 / 4.0f;
 				if (dist > 0)
