@@ -45,19 +45,21 @@ void Scanner::Close(RPlidarDriver * drv)
 
 void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibration_results) [NUM_SAMPLE_POINTS], double scale_factor)
 {
-	for(int calibration_counter = 0; calibration_counter <= num_samples; calibration_counter++) 
+	int max_attempts = 500;
+	int good_samples = 0;
+	int attempts = 0;
+	while((attempts < max_attempts) && (good_samples < num_samples))
 	{
 		rplidar_response_measurement_node_t nodes[NUM_SAMPLE_POINTS];
 		size_t   count = _countof(nodes);
 		u_result op_result = drv->grabScanData(nodes, count);
 
-		std::cout << num_samples - calibration_counter << " (ok) , ";
-
+		std::cout << num_samples - good_samples << " (ok) , " << std::flush;
 
 		if (IS_OK(op_result)) 
 		{
 			drv->ascendScanData(nodes, count);
-			std::cout << num_samples - calibration_counter << " (NOT OK), ";
+			std::cout << num_samples - good_samples << " (NOT OK), " << std::flush;
 			
 			for (int pos = 0; pos < (int)count; ++pos)
 			{
@@ -70,15 +72,27 @@ void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibrati
 					}
 				}
 			}
+			good_samples++;
 		}
+		attempts++;
 	}
 
+	std::cout << "Calibration gathered " << good_samples << " good samples out of " << attempts << "attempts.\n" << std::flush;
+
 	// Multiply the results by the scale factor
+	int bad_samples = 0;
 	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
 	{
+		if (calibration_results[i] == DEFAULT_CALIBRATION_VALUE)
+		{
+			bad_samples++;
+		}
 		calibration_results[i] = calibration_results[i] * 0.9;
+		
 		//std::cout << "\nseed sum: " << calibration_seeds[i][0] << "count: " << calibration_seeds[i][1] << "result: " << calibration_values[i] << std::endl;
 		//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 	}
+
+	std::cout << "Calibration found " << NUM_SAMPLE_POINTS - bad_samples << " valid samples out of " << NUM_SAMPLE_POINTS << " total collected.\n" << std::flush;
 }
 

@@ -187,7 +187,7 @@ int main(int argc, const char * argv[]) {
 
 	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
 	{
-		calibration_values[i] = 15000.0;
+		calibration_values[i] = DEFAULT_CALIBRATION_VALUE;
 	}
 
 	for (int i = 100; i > 0; i--)

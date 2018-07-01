@@ -5,6 +5,7 @@
 #include "../include/rplidar.h" //RPLIDAR standard sdk, all-in-one header
 
 #define NUM_SAMPLE_POINTS 8192
+#define DEFAULT_CALIBRATION_VALUE 15000.0
 
 #ifndef _countof
 #define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
