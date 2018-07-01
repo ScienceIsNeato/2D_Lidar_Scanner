@@ -181,7 +181,7 @@ int main(int argc, const char * argv[]) {
 	drv->startMotor();
 	// start scan...
 	drv->startScan(0, 1);
-	const static int CALIBRATION_PNTS = 50;
+	const static int CALIBRATION_PNTS = 150;
 	double CALIBRATION_SCALE_FACTOR = 0.95;
 	double calibration_values[NUM_SAMPLE_POINTS];
 

@@ -51,10 +51,13 @@ void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibrati
 		size_t   count = _countof(nodes);
 		u_result op_result = drv->grabScanData(nodes, count);
 
+		std::cout << num_samples - calibration_counter << " (ok) , ";
+
+
 		if (IS_OK(op_result)) 
 		{
 			drv->ascendScanData(nodes, count);
-			std::cout << num_samples - calibration_counter << ", ";
+			std::cout << num_samples - calibration_counter << " (NOT OK), ";
 			
 			for (int pos = 0; pos < (int)count; ++pos)
 			{
