@@ -29,6 +29,7 @@
 #include <iostream>
 
 #include "rplidar.h" //RPLIDAR standard sdk, all-in-one header
+#include "Scanner.h"
 
 #ifndef _countof
 #define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
@@ -51,29 +52,7 @@ static inline void delay(_word_size_t ms){
 
 using namespace rp::standalone::rplidar;
 
-bool checkRPLIDARHealth(RPlidarDriver * drv)
-{
-    u_result     op_result;
-    rplidar_response_device_health_t healthinfo;
 
-
-    op_result = drv->getHealth(healthinfo);
-    if (IS_OK(op_result)) { // the macro IS_OK is the preperred way to judge whether the operation is succeed.
-        printf("RPLidar health status : %d\n", healthinfo.status);
-        if (healthinfo.status == RPLIDAR_STATUS_ERROR) {
-            fprintf(stderr, "Error, rplidar internal error detected. Please reboot the device to retry.\n");
-            // enable the following code if you want rplidar to be reboot by software
-            // drv->reset();
-            return false;
-        } else {
-            return true;
-        }
-
-    } else {
-        fprintf(stderr, "Error, cannot retrieve the lidar health code: %x\n", op_result);
-        return false;
-    }
-}
 
 #include <signal.h>
 bool ctrl_c_pressed;
@@ -94,6 +73,8 @@ int main(int argc, const char * argv[]) {
 	_u32         baudrateArray[2] = { 115200, 256000 };
 	_u32         opt_com_baudrate = 0;
 	u_result     op_result;
+
+	Scanner *scanner = new Scanner();
 
 	bool useArgcBaudrate = false;
 
@@ -195,7 +176,7 @@ int main(int argc, const char * argv[]) {
 
 
 	// check health...
-	if (!checkRPLIDARHealth(drv)) {
+	if (!scanner->checkRPLIDARHealth(drv)) {
 		on_finished(drv);
 	}
 
@@ -205,7 +186,7 @@ int main(int argc, const char * argv[]) {
 	// start scan...
 	drv->startScan(0, 1);
 	int calibration_counter = 0;
-	const static int CALIBRATION_PNTS = 500;
+	const static int CALIBRATION_PNTS = 50;
 	//double calibration_seeds[8192] = {{ 0.0 }}; // seed sum, num samples
 	double calibration_seeds[8192];
 	double calibration_values[8192];
