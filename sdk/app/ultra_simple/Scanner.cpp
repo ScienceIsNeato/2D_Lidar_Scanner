@@ -1,11 +1,8 @@
 #include "Scanner.h"
 
-
-
 Scanner::Scanner()
 {
 }
-
 
 Scanner::~Scanner()
 {
@@ -15,7 +12,6 @@ bool Scanner::CheckRPLIDARHealth(RPlidarDriver * drv)
 {
 	u_result     op_result;
 	rplidar_response_device_health_t healthinfo;
-
 
 	op_result = drv->getHealth(healthinfo);
 	if (IS_OK(op_result)) { // the macro IS_OK is the preperred way to judge whether the operation is succeed.
@@ -90,11 +86,48 @@ void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibrati
 			bad_samples++;
 		}
 		calibration_results[i] = calibration_results[i] * 0.9;
-		
-		//std::cout << "\nseed sum: " << calibration_seeds[i][0] << "count: " << calibration_seeds[i][1] << "result: " << calibration_values[i] << std::endl;
-		//std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 	}
 
 	std::cout << "Calibration found " << NUM_SAMPLE_POINTS - bad_samples << " valid samples out of " << NUM_SAMPLE_POINTS << " total collected.\n" << std::flush;
+}
+
+ScanResult Scanner::Scan(RPlidarDriver * drv, double(calibration_values)[NUM_SAMPLE_POINTS])
+{
+	u_result     op_result;
+	ScanResult ret_val;
+
+	// fetech result and print it out...
+	rplidar_response_measurement_node_t nodes[NUM_SAMPLE_POINTS];
+	size_t count = _countof(nodes);
+	op_result = drv->grabScanData(nodes, count);
+	double shortest_distance = 1000000;
+	double shortest_angle = 0;
+	int shortest_index = 0;
+
+	if (IS_OK(op_result))
+	{
+		drv->ascendScanData(nodes, count);
+		for (int pos = 0; pos < (int)count; ++pos)
+		{
+			double dist = nodes[pos].distance_q2 / 4.0f;
+			if ((dist > 0) &&
+				(dist < calibration_values[pos]) &&
+				nodes[pos].sync_quality > 40)
+			{
+				ret_val.closest_distance = dist;
+				ret_val.closest_angle = (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f;
+				ret_val.closest_index = pos;
+				ret_val.valid = true;
+				//std::cout << "accepting b/c " << dist << " is less than " << calibration_values[pos] << " for " << shortest_angle << std::endl;
+			}
+
+			//printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
+			//    (nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
+			//    (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
+			//    nodes[pos].distance_q2/4.0f,
+			//    nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
+		}
+	}	
+	return ret_val;
 }
 

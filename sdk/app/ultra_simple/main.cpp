@@ -169,8 +169,6 @@ int main(int argc, const char * argv[]) {
 		, devinfo.firmware_version & 0xFF
 		, (int)devinfo.hardware_version);
 
-
-
 	// check health...
 	if (!scanner->CheckRPLIDARHealth(drv)) {
 		on_finished(drv, scanner);
@@ -201,59 +199,25 @@ int main(int argc, const char * argv[]) {
 
 	scanner->Calibrate(drv, CALIBRATION_PNTS, calibration_values, CALIBRATION_SCALE_FACTOR);
 
-    // fetech result and print it out...
-    while (1) {
-        rplidar_response_measurement_node_t nodes[NUM_SAMPLE_POINTS];
-        size_t   count = _countof(nodes);
-        op_result = drv->grabScanData(nodes, count);
-		double shortest_distance = 1000000;
-		double shortest_angle = 0;
-		int shortest_index = 0;
+	ScanResult res;
+	while (!ctrl_c_pressed)
+	{
+		res = scanner->Scan(drv, calibration_values);
+		if (res.valid && res.closest_distance < calibration_values[res.closest_index])
+		{
+			printf("\nshortest theta: %03.2f shortest Dist: %08.2f calibration Dist: %08.2f\n",
+				res.closest_angle,
+				res.closest_distance,
+				calibration_values[res.closest_index]
+			);
 
-        if (IS_OK(op_result)) {
-            drv->ascendScanData(nodes, count);
-            for (int pos = 0; pos < (int)count ; ++pos)
-			{
-				double dist = nodes[pos].distance_q2 / 4.0f;
-				if ((dist > 0) &&
-					(dist < calibration_values[pos]) &&
-					nodes[pos].sync_quality > 40)
-				{
-					shortest_distance = dist;
-					shortest_angle = (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT) / 64.0f;
-					shortest_index = pos;
-					//std::cout << "accepting b/c " << dist << " is less than " << calibration_values[pos] << " for " << shortest_angle << std::endl;
-				}
-
-                //printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
-                //    (nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
-                //    (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
-                //    nodes[pos].distance_q2/4.0f,
-                //    nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
-            }
-
-			if (shortest_distance < calibration_values[shortest_index])
-			{
-				printf("shortest theta: %03.2f shortest Dist: %08.2f calibration Dist: %08.2f\n",
-					shortest_angle,
-					shortest_distance,
-					calibration_values[shortest_index]
-				);
-				
-			}
-			else
-			{
-				std::cout << std::endl;
-				//printf("INVALID shortest theta: %03.2f shortest Dist: %08.2f , seed value: %03.2f\n", shortest_angle, shortest_distance, calibration_values[shortest_index] );
-			}
-        }
-
-        if (ctrl_c_pressed){ 
-			int dummy;
-			std::cin >> dummy;
-            break;
-        }
-    }
+		}
+		else
+		{
+			std::cout << ".";
+			//printf("INVALID shortest theta: %03.2f shortest Dist: %08.2f , seed value: %03.2f\n", shortest_angle, shortest_distance, calibration_values[shortest_index] );
+		}
+	}
 
     drv->stop();
     drv->stopMotor();

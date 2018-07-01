@@ -14,6 +14,14 @@
 
 using namespace rp::standalone::rplidar;
 
+struct ScanResult
+{
+	double closest_angle;
+	double closest_distance;
+	int closest_index;
+	bool valid = false;
+};
+
 class Scanner
 {
 public:
@@ -24,6 +32,7 @@ public:
 	void Close(RPlidarDriver * drv);
 	void Initialize(RPlidarDriver * drv);
 	void Calibrate(RPlidarDriver * drv, int num_samples, double (&calibration_results) [NUM_SAMPLE_POINTS], double scale_factor);
+	ScanResult Scan(RPlidarDriver * drv, double(calibration_values)[NUM_SAMPLE_POINTS]);
 
 };
 
