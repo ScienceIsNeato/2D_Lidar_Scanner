@@ -32,6 +32,8 @@ public:
 	void Close(RPlidarDriver * drv);
 	void Initialize(RPlidarDriver * drv);
 	void Calibrate(RPlidarDriver * drv, int num_samples, double (&calibration_results) [NUM_SAMPLE_POINTS], double scale_factor);
+	void SmoothCalibrationResults(double(&calibration_results)[NUM_SAMPLE_POINTS], double(&smoothed_cal_vals)[NUM_SAMPLE_POINTS]);
+
 	ScanResult Scan(RPlidarDriver * drv, double(calibration_values)[NUM_SAMPLE_POINTS]);
 
 };

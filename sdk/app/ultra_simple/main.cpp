@@ -59,6 +59,8 @@ void ctrlc(int)
 
 void on_finished(RPlidarDriver * drv, Scanner *scanner)
 {
+	int tmp;
+	std::cin >> tmp;
 	scanner->Close(drv);
 	exit(0);
 }
@@ -179,13 +181,15 @@ int main(int argc, const char * argv[]) {
 	drv->startMotor();
 	// start scan...
 	drv->startScan(0, 1);
-	const static int CALIBRATION_PNTS = 150;
-	double CALIBRATION_SCALE_FACTOR = 0.95;
+	const static int CALIBRATION_PNTS = 50;
+	double CALIBRATION_SCALE_FACTOR = 0.98;
 	double calibration_values[NUM_SAMPLE_POINTS];
+	double smoothed_cal_vals[NUM_SAMPLE_POINTS];
 
 	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
 	{
 		calibration_values[i] = DEFAULT_CALIBRATION_VALUE;
+		smoothed_cal_vals[i] = 0;
 	}
 
 	for (int i = 100; i > 0; i--)
@@ -198,24 +202,36 @@ int main(int argc, const char * argv[]) {
 	std::cout << "Calibration countdown! -- " << CALIBRATION_PNTS << std::endl;
 
 	scanner->Calibrate(drv, CALIBRATION_PNTS, calibration_values, CALIBRATION_SCALE_FACTOR);
+	scanner->SmoothCalibrationResults(calibration_values, smoothed_cal_vals);
+
+	//for (int i = 0; i < 300; i++)
+	//{
+	//	std::cout << "before: " << calibration_values[i] << ", after: " << smoothed_cal_vals[i] << std::endl;
+	//}
 
 	ScanResult res;
 	while (!ctrl_c_pressed)
 	{
-		res = scanner->Scan(drv, calibration_values);
-		if (res.valid && res.closest_distance < calibration_values[res.closest_index])
+		res = scanner->Scan(drv, smoothed_cal_vals);
+		if (res.valid && res.closest_distance < smoothed_cal_vals[res.closest_index])
 		{
 			printf("\nshortest theta: %03.2f shortest Dist: %08.2f calibration Dist: %08.2f\n",
 				res.closest_angle,
 				res.closest_distance,
-				calibration_values[res.closest_index]
+				smoothed_cal_vals[res.closest_index]
 			);
+			//std::cout << "\ntheta: " << res.closest_angle << " | ";
+			/*for (int i = -3; i < 3; i++)
+			{
+				std::cout << smoothed_cal_vals[res.closest_index + i] << ", \t";
+			}
+			std::cout << std::flush;*/
 
 		}
 		else
 		{
-			std::cout << ".";
-			//printf("INVALID shortest theta: %03.2f shortest Dist: %08.2f , seed value: %03.2f\n", shortest_angle, shortest_distance, calibration_values[shortest_index] );
+			std::cout << "." << std::flush;
+			//printf("INVALID shortest theta: %03.2f shortest Dist: %08.2f , seed value: %03.2f\n", shortest_angle, shortest_distance, smoothed_cal_vals[shortest_index] );
 		}
 	}
 
