@@ -28,12 +28,22 @@ public:
 	Scanner();
 	~Scanner();
 
+	// Check if the data coming from the lidar is valid
 	bool CheckRPLIDARHealth(RPlidarDriver * drv);
-	void Close(RPlidarDriver * drv);
-	void Initialize(RPlidarDriver * drv);
-	void Calibrate(RPlidarDriver * drv, int num_samples, double (&calibration_results) [NUM_SAMPLE_POINTS], double scale_factor);
-	void SmoothCalibrationResults(double(&calibration_results)[NUM_SAMPLE_POINTS], double(&smoothed_cal_vals)[NUM_SAMPLE_POINTS]);
 
+	// Cleanup
+	void Close(RPlidarDriver * drv);
+
+	// Set up the rplidar driver and initialize
+	void Initialize(RPlidarDriver * drv);
+
+	// Get raw data of surroundings for a period of time and average them per angle measurement
+	void Calibrate(RPlidarDriver * drv, int num_samples, double (&calibration_results) [NUM_SAMPLE_POINTS]);
+
+	// Take raw calibration results and manipulate them to avoid false positives during detection
+	void SmoothCalibrationResults(double(&calibration_results)[NUM_SAMPLE_POINTS], double(&smoothed_cal_vals)[NUM_SAMPLE_POINTS], double scale_factor);
+
+	// Get raw values for a single pass
 	ScanResult Scan(RPlidarDriver * drv, double(calibration_values)[NUM_SAMPLE_POINTS]);
 
 };

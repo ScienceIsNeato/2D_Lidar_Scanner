@@ -39,7 +39,7 @@ void Scanner::Close(RPlidarDriver * drv)
 	drv = NULL;
 }
 
-void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibration_results) [NUM_SAMPLE_POINTS], double scale_factor)
+void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibration_results) [NUM_SAMPLE_POINTS])
 {
 	int max_attempts = 500;
 	int good_samples = 0;
@@ -85,14 +85,11 @@ void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibrati
 		{
 			bad_samples++;
 		}
-		calibration_results[i] = calibration_results[i] * 0.9;
 	}
-	// TODO: maybe we need a smoother to average the lower of nearby values?
-	// should do a test to see if the false positives we're getting are right next to reasonable values by angle
 	std::cout << "Calibration found " << NUM_SAMPLE_POINTS - bad_samples << " valid samples out of " << NUM_SAMPLE_POINTS << " total collected.\n" << std::flush;
 }
 
-void Scanner::SmoothCalibrationResults(double(&calibration_results)[NUM_SAMPLE_POINTS], double(&smoothed_cal_vals)[NUM_SAMPLE_POINTS])
+void Scanner::SmoothCalibrationResults(double(&calibration_results)[NUM_SAMPLE_POINTS], double(&smoothed_cal_vals)[NUM_SAMPLE_POINTS], double scale_factor)
 {
 	int range = 5;
 	int adjusted = 0;
@@ -108,7 +105,9 @@ void Scanner::SmoothCalibrationResults(double(&calibration_results)[NUM_SAMPLE_P
 				val = calibration_results[relative_index];
 			}
 		}
-		smoothed_cal_vals[i] = val;
+
+		smoothed_cal_vals[i] = val * scale_factor;
+
 		if (val != calibration_results[i])
 		{
 			adjusted++;
