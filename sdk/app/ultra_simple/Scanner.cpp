@@ -8,6 +8,107 @@ Scanner::~Scanner()
 {
 }
 
+bool Scanner::Initialize(RPlidarDriver * drv, int argc, const char * argv[])
+{
+	const char * opt_com_path = NULL;
+	_u32         baudrateArray[2] = { 115200, 256000 };
+	_u32         opt_com_baudrate = 0;
+	u_result     op_result;
+
+	bool useArgcBaudrate = false;
+
+	printf("Ultra simple LIDAR data grabber for RPLIDAR.\n"
+		"Version: 1.6.1\n");
+
+	// read serial port from the command line...
+	if (argc > 1) opt_com_path = argv[1]; // or set to a fixed value: e.g. "com3" 
+
+	// read baud rate from the command line if specified...
+	if (argc > 2)
+	{
+		opt_com_baudrate = strtoul(argv[2], NULL, 10);
+		useArgcBaudrate = true;
+	}
+
+	if (!opt_com_path) {
+#ifdef _WIN32
+		// use default com port
+		opt_com_path = "\\\\.\\com3";
+#else
+		opt_com_path = "/dev/ttyUSB0";
+#endif
+	}
+
+	rplidar_response_device_info_t devinfo;
+	bool connectSuccess = false;
+	// make connection...
+	if (useArgcBaudrate)
+	{
+		if (!drv)
+			drv = RPlidarDriver::CreateDriver(DRIVER_TYPE_SERIALPORT);
+		if (IS_OK(drv->connect(opt_com_path, opt_com_baudrate)))
+		{
+			op_result = drv->getDeviceInfo(devinfo);
+
+			if (IS_OK(op_result))
+			{
+				connectSuccess = true;
+			}
+			else
+			{
+				delete drv;
+				drv = NULL;
+			}
+		}
+	}
+	else
+	{
+		size_t baudRateArraySize = (sizeof(baudrateArray)) / (sizeof(baudrateArray[0]));
+		for (size_t i = 0; i < baudRateArraySize; ++i)
+		{
+			if (!drv)
+				drv = RPlidarDriver::CreateDriver(DRIVER_TYPE_SERIALPORT);
+			if (IS_OK(drv->connect(opt_com_path, baudrateArray[i])))
+			{
+				op_result = drv->getDeviceInfo(devinfo);
+
+				if (IS_OK(op_result))
+				{
+					connectSuccess = true;
+					break;
+				}
+				else
+				{
+					delete drv;
+					drv = NULL;
+				}
+			}
+		}
+	}
+	if (!connectSuccess) {
+
+		fprintf(stderr, "Error, cannot bind to the specified serial port %s.\n"
+			, opt_com_path);
+		return false;
+	}
+
+	// print out the device serial number, firmware and hardware version number..
+	printf("RPLIDAR S/N: ");
+	for (int pos = 0; pos < 16; ++pos)
+	{
+		printf("%02X", devinfo.serialnum[pos]);
+	}
+
+	printf("\n"
+		"Firmware Ver: %d.%02d\n"
+		"Hardware Rev: %d\n"
+		, devinfo.firmware_version >> 8
+		, devinfo.firmware_version & 0xFF
+		, (int)devinfo.hardware_version);
+
+	return true;
+}
+
 bool Scanner::CheckRPLIDARHealth(RPlidarDriver * drv)
 {
 	u_result     op_result;
@@ -44,6 +145,23 @@ void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibrati
 	int max_attempts = 500;
 	int good_samples = 0;
 	int attempts = 0;
+	double smoothed_cal_vals[NUM_SAMPLE_POINTS];
+
+
+	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
+	{
+		calibration_results[i] = DEFAULT_CALIBRATION_VALUE;
+		smoothed_cal_vals[i] = 0;
+	}
+
+	for (int i = 100; i > 0; i--)
+	{
+		std::cout << "Calibrating in " << i << " ...\n";
+		//std::this_thread::sleep_for(std::chrono::seconds(1)); This is broken
+	}
+
+	std::cout << "Calibration countdown! -- " << num_samples << std::endl;
+
 	while((attempts < max_attempts) && (good_samples < num_samples))
 	{
 		rplidar_response_measurement_node_t nodes[NUM_SAMPLE_POINTS];
@@ -87,6 +205,7 @@ void Scanner::Calibrate(RPlidarDriver * drv, int num_samples, double (&calibrati
 		}
 	}
 	std::cout << "Calibration found " << NUM_SAMPLE_POINTS - bad_samples << " valid samples out of " << NUM_SAMPLE_POINTS << " total collected.\n" << std::flush;
+	SmoothCalibrationResults(calibration_results, smoothed_cal_vals, .98);
 }
 
 void Scanner::SmoothCalibrationResults(double(&calibration_results)[NUM_SAMPLE_POINTS], double(&smoothed_cal_vals)[NUM_SAMPLE_POINTS], double scale_factor)
@@ -116,6 +235,30 @@ void Scanner::SmoothCalibrationResults(double(&calibration_results)[NUM_SAMPLE_P
 
 	}
 	std::cout << "Smoothing complete. " << adjusted << " points have been adjusted. Avg ajdustment: " << adjustment_sum/double(adjusted) << "\n" << std::flush;
+	
+	// Assign the smoothed values as the final calibration results to be passed back up the stack
+	for (int i = 0; i < NUM_SAMPLE_POINTS; i++)
+	{
+		calibration_results[i] = smoothed_cal_vals[i];
+	}
+}
+
+bool Scanner::Start(RPlidarDriver *drv, int argc, const char * argv[])
+{
+	if (!(Initialize(drv, argc, argv)) || (!CheckRPLIDARHealth(drv)))
+	{
+		return false;
+	}
+	drv->startMotor();
+	drv->startScan(0, 1);
+
+	return true;
+}
+
+void Scanner::Stop(RPlidarDriver *drv)
+{
+	drv->stop();
+	drv->stopMotor();
 }
 
 ScanResult Scanner::Scan(RPlidarDriver * drv, double(calibration_values)[NUM_SAMPLE_POINTS])
