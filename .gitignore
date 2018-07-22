@@ -59,3 +59,4 @@ sdk/workspaces/vc10/.vs/sdk_and_demo/v15/Browse.VC.db
 *.log
 sdk/obj/win32/2D_scanner/Debug/2D_scanner.Build.CppClean.log
 sdk/workspaces/vc10/sdk_and_demo.VC.db
+sdk/obj/Linux/
